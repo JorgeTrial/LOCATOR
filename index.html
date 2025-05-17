@@ -2,29 +2,47 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ER Locator</title>
-
-  <script>
-    window.onload = function () {
-      const isDesktop = window.innerWidth >= 1025;
-      if (isDesktop) {
-        window.location.href = "https://www.southpointer.com/app";
-      }
-    };
-  </script>
-</head>
-<body>
-
-<html>
-<head>
-  <meta charset="UTF-8">
   <title>ER Locator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" />
-
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    #promptBox {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      color: #333;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 300px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    #promptBox button {
+      margin-top: 15px;
+      background: #ED0024;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #promptBox button:hover {
+      background-color: #b3001b;
+    }
 
     #search-container {
       margin-top: 20px;
@@ -118,74 +136,100 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    #jotform-wrapper {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0;
+    }
+
     @media (max-width: 480px) {
       .individual-map, .result-box, #address-input { width: 90% !important; }
       #search-button, #location-button { width: 100%; max-width: 300px; }
-      #jotform-container iframe { height: 750px; }
+      #jotform-wrapper iframe { height: 750px; }
     }
   </style>
 </head>
 <body>
 
-  <div id="search-container">
-    <input id="address-input" type="text" placeholder="Enter address or ZIP" />
-    <div id="button-container">
-      <button id="search-button" onclick="handleSearch()" aria-label="Search nearest emergency room">Search</button>
-      <button id="location-button" onclick="useMyLocation()" aria-label="Use current location to find nearest emergency room">Use My Location</button>
-    </div>
+<div id="promptBox">
+  <div id="promptText"></div>
+  <button onclick="closePrompt()">Got it</button>
+</div>
+
+<div id="search-container">
+  <input id="address-input" type="text" placeholder="Enter address or ZIP" />
+  <div id="button-container">
+    <button id="search-button" onclick="handleSearch()">Search</button>
+    <button id="location-button" onclick="useMyLocation()">Use My Location</button>
   </div>
+</div>
 
-  <div id="individual-maps">
-    <div class="map-result-group">
-      <div id="map1" class="individual-map"></div>
-      <div id="result1" class="result-box"></div>
-    </div>
-    <div class="map-result-group">
-      <div id="map2" class="individual-map"></div>
-      <div id="result2" class="result-box"></div>
-    </div>
+<div id="individual-maps">
+  <div class="map-result-group">
+    <div id="map1" class="individual-map"></div>
+    <div id="result1" class="result-box"></div>
   </div>
-
-  <div id="loading-spinner">
-    <div class="spinner"></div>
-    <p>Searching for the Nearest ER...</p>
+  <div class="map-result-group">
+    <div id="map2" class="individual-map"></div>
+    <div id="result2" class="result-box"></div>
   </div>
+</div>
 
-  <!-- JotForm container -->
-  <div id="jotform-container" style="display:none;">
-    <div id="jotform-wrapper">
-      <iframe
-        id="jotform-iframe"
-        src=""
-        title="JotForm"
-        frameborder="0"
-        allowtransparency="true"
-        allowfullscreen
-        style="width: 100%; height: 2200px; border: none;">
-      </iframe>
-    </div>
+<div id="loading-spinner">
+  <div class="spinner"></div>
+  <p>Searching for the Nearest ER...</p>
+</div>
+
+<!-- JotForm container -->
+<div id="jotform-container" style="display:none;">
+  <div id="jotform-wrapper">
+    <iframe
+      id="jotform-iframe"
+      src=""
+      title="JotForm"
+      frameborder="0"
+      allowtransparency="true"
+      allowfullscreen
+      style="width: 100%; height: 2200px; border: none;">
+    </iframe>
   </div>
+</div>
 
-  <style>
-    #jotform-wrapper {
-      max-width: 1600px;
-      margin: 0px auto;
-      padding: 0 0px;
-      box-sizing: border-box;
-    }
+<script>
 
-    @media (max-width: 480px) {
-      #jotform-wrapper iframe {
-        height: 600px;
+  window.onload = function () {
+    const promptBox = document.getElementById("promptBox");
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+    const isAndroid = /android/i.test(userAgent);
+    const isMobile = window.innerWidth < 1025;
+
+    let message = "";
+
+    if (isMobile) {
+      if (isIOS) {
+        message = "Add this app to your iPhone home screen: Tap Share then Add to Home Screen.";
+      } else if (isAndroid) {
+        message = "Add this app to your Android home screen: Tap menu then Add to Home screen.";
+      } else {
+        message = "Add this app to your home screen for quick access!";
       }
+    } else {
+      message = "Bookmark this site for quick access: Press Ctrl+D (Windows) or Cmd+D (Mac).";
     }
-  </style>
 
-  <script>
-    let geocoder, infowindow, userMarker, autocomplete;
+    document.getElementById("promptText").innerText = message;
+    promptBox.style.display = "block";
+  };
 
-    const locations = [
-      { name: "Neighbors Baytown", address: "6051 Garth Road #100 Baytown TX 77521", lat: 29.791386, lng: -94.980612 },
+  function closePrompt() {
+    document.getElementById("promptBox").style.display = "none";
+  }
+
+  let geocoder, autocomplete;
+
+  const locations = [
+        { name: "Neighbors Baytown", address: "6051 Garth Road #100 Baytown TX 77521", lat: 29.791386, lng: -94.980612 },
       { name: "Altus Livingston", address: "111 Emergency Rd, Livingston, TX 77351", lat: 30.712697, lng: -94.955048 },
       { name: "Altus Fort Worth", address: "1251 Eastchase Pkwy, Fort Worth, TX 76120", lat: 32.761469, lng: -97.166676 },
       { name: "Altus Waxahachie", address: "1791 N Hwy 77, Waxahachie, TX 75165", lat: 32.432953, lng: -96.838908 },
@@ -215,159 +259,161 @@
       { name: "Life Savers ER - Heights", address: "3820 N Shepherd Dr A, Houston, TX 77018", lat: 29.82173, lng: -95.40985 },
       { name: "Life Savers ER - Willowbrook", address: "17685 TX-249, Houston, TX 77064", lat: 29.95778, lng: -95.54526 },
       { name: "Townsen Memorial Hospital ER", address: "1475 Farm to Market 1960 Bypass Rd E, Humble, TX 77338", lat: 30.004950, lng: -95.252494 },
-      { name: "The Emergency Center Conroe", address: "4019 Interstate 45 North, Conroe, Texas 77304", lat: 30.369826, lng: -95.486514 }
-    ];
+    { name: "The Emergency Center Conroe", address: "4019 Interstate 45 North, Conroe, Texas 77304", lat: 30.369826, lng: -95.486514 },
+    { name: "Montrose Emergency Room", address: "1110 W Gray St Suite 101, Houston, TX 77019", lat: 29.75355, lng: -95.39239 },
+    { name: "Care Plus Richmond Emergency Room", address: "8111 W Grand Pkwy S, Richmond, TX 77407", lat: 29.66195, lng: -95.73552 }
+    // Add other locations here as needed
+  ];
 
+  function initMap() {
+    geocoder = new google.maps.Geocoder();
+    autocomplete = new google.maps.places.Autocomplete(document.getElementById("address-input"));
+    document.getElementById("address-input").addEventListener("keypress", function (e) {
+      if (e.key === "Enter") handleSearch();
+    });
+  }
 
-    function initMap() {
-      geocoder = new google.maps.Geocoder();
-      autocomplete = new google.maps.places.Autocomplete(document.getElementById("address-input"));
-      document.getElementById("address-input").addEventListener("keypress", function (e) {
-        if (e.key === "Enter") handleSearch();
+  function resetDisplay() {
+    for (let i = 1; i <= 2; i++) {
+      document.getElementById(`map${i}`).style.display = "none";
+      document.getElementById(`result${i}`).style.display = "none";
+      document.getElementById(`result${i}`).innerHTML = "";
+    }
+    document.getElementById("jotform-container").style.display = "none";
+  }
+
+  function handleSearch() {
+    resetDisplay();
+    const address = document.getElementById("address-input").value;
+    if (address.trim()) {
+      document.getElementById("loading-spinner").style.display = "block";
+      geocodeAddress(address);
+    }
+  }
+
+  function useMyLocation() {
+    resetDisplay();
+    if (navigator.geolocation) {
+      document.getElementById("loading-spinner").style.display = "block";
+      navigator.geolocation.getCurrentPosition(position => {
+        const userLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        showNearestLocations("Your Location", userLocation);
+      }, () => {
+        document.getElementById("loading-spinner").style.display = "none";
+        alert("Unable to retrieve your location.");
       });
+    } else {
+      alert("Geolocation is not supported.");
     }
+  }
 
-    function resetDisplay() {
-      for (let i = 1; i <= 2; i++) {
-        document.getElementById(`map${i}`).style.display = "none";
-        document.getElementById(`result${i}`).style.display = "none";
-        document.getElementById(`result${i}`).innerHTML = "";
+  function geocodeAddress(address) {
+    geocoder.geocode({ address }, (results, status) => {
+      if (status === "OK") {
+        const userLocation = results[0].geometry.location;
+        showNearestLocations(address, userLocation);
+      } else {
+        document.getElementById("loading-spinner").style.display = "none";
+        alert("Geocode failed: " + status);
       }
-      document.getElementById("jotform-container").style.display = "none";
-    }
+    });
+  }
 
-    function handleSearch() {
-      resetDisplay();
-      const address = document.getElementById("address-input").value;
-      if (address.trim()) {
-        document.getElementById("loading-spinner").style.display = "block";
-        geocodeAddress(address);
-      }
-    }
+  function showNearestLocations(origin, userLocation) {
+    const distances = locations.map(loc => {
+      const locLatLng = new google.maps.LatLng(loc.lat, loc.lng);
+      const distance = google.maps.geometry.spherical.computeDistanceBetween(userLocation, locLatLng);
+      return { ...loc, distance };
+    });
 
-    function useMyLocation() {
-      resetDisplay();
-      if (navigator.geolocation) {
-        document.getElementById("loading-spinner").style.display = "block";
-        navigator.geolocation.getCurrentPosition(position => {
-          const userLocation = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
+    distances.sort((a, b) => a.distance - b.distance);
+    const topResults = distances.slice(0, 2);
+
+    const service = new google.maps.DistanceMatrixService();
+    const destinationLatLngs = topResults.map(loc => new google.maps.LatLng(loc.lat, loc.lng));
+
+    service.getDistanceMatrix({
+      origins: [userLocation],
+      destinations: destinationLatLngs,
+      travelMode: google.maps.TravelMode.DRIVING,
+      unitSystem: google.maps.UnitSystem.IMPERIAL,
+    }, (response, status) => {
+      document.getElementById("loading-spinner").style.display = "none";
+
+      if (status === "OK") {
+        const results = response.rows[0].elements;
+
+        topResults.forEach((loc, i) => {
+          loc.distanceText = results[i].distance.text;
+          loc.durationText = results[i].duration.text;
+
+          const mapDivId = `map${i + 1}`;
+          const resultBoxId = `result${i + 1}`;
+
+          document.getElementById(mapDivId).style.display = "block";
+          document.getElementById(resultBoxId).style.display = "block";
+
+          const map = new google.maps.Map(document.getElementById(mapDivId), {
+            center: { lat: loc.lat, lng: loc.lng },
+            zoom: 14
+          });
+
+          const marker = new google.maps.Marker({
+            position: { lat: loc.lat, lng: loc.lng },
+            map,
+            icon: {
+              url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+              scaledSize: new google.maps.Size(30, 30)
+            },
+            title: loc.name
+          });
+
+          const infowindow = new google.maps.InfoWindow({
+            content: `
+              <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.4;">
+                <strong style="color: #ED0024;">${loc.name}</strong><br>
+                ${loc.address}<br>
+                Distance: ${loc.distanceText}<br>
+                Duration: ${loc.durationText}<br>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}" target="_blank" style="color:#ED0024; text-decoration: underline;">Get directions</a>
+              </div>
+            `
+          });
+
+          marker.addListener("click", () => {
+            infowindow.open(map, marker);
+          });
+
+          const resultBox = document.getElementById(resultBoxId);
+          resultBox.innerHTML = `
+            <i class="fas fa-map-marker-alt" style="color: #ED0024; margin-right: 6px;"></i>
+            <strong>${loc.name}</strong><br>
+            ${loc.address}<br>
+            Distance: ${loc.distanceText}, Duration: ${loc.durationText}<br>
+            <span style="color:#ED0024; text-decoration:underline;">Click to select</span>
+          `;
+
+          resultBox.onclick = () => {
+            document.querySelectorAll('.result-box').forEach(box => box.style.borderColor = "#ddd");
+            resultBox.style.borderColor = "#ED0024";
+
+            document.getElementById("jotform-iframe").src =
+              `https://form.jotform.com/233543851603050?preferredEmergency=${encodeURIComponent(loc.name)}`;
+            document.getElementById("jotform-container").style.display = "block";
+            document.getElementById("jotform-container").scrollIntoView({ behavior: "smooth" });
           };
-          showNearestLocations("Your Location", userLocation);
-        }, () => {
-          document.getElementById("loading-spinner").style.display = "none";
-          alert("Unable to retrieve your location.");
         });
       } else {
-        alert("Geolocation is not supported.");
+        alert("Distance Matrix failed: " + status);
       }
-    }
+    });
+  }
+</script>
 
-    function geocodeAddress(address) {
-      geocoder.geocode({ address }, (results, status) => {
-        if (status === "OK") {
-          const userLocation = results[0].geometry.location;
-          showNearestLocations(address, userLocation);
-        } else {
-          document.getElementById("loading-spinner").style.display = "none";
-          alert("Geocode failed: " + status);
-        }
-      });
-    }
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJBb5D7fFcUcOreVt-h-9WCCfoD3MRa1Q&libraries=places,geometry&callback=initMap"></script>
 
-    function showNearestLocations(origin, userLocation) {
-      const distances = locations.map(loc => {
-        const locLatLng = new google.maps.LatLng(loc.lat, loc.lng);
-        const distance = google.maps.geometry.spherical.computeDistanceBetween(userLocation, locLatLng);
-        return { ...loc, distance };
-      });
-
-      distances.sort((a, b) => a.distance - b.distance);
-      const topResults = distances.slice(0, 2);
-
-      const service = new google.maps.DistanceMatrixService();
-      const destinationLatLngs = topResults.map(loc => new google.maps.LatLng(loc.lat, loc.lng));
-
-      service.getDistanceMatrix({
-        origins: [userLocation],
-        destinations: destinationLatLngs,
-        travelMode: google.maps.TravelMode.DRIVING,
-        unitSystem: google.maps.UnitSystem.IMPERIAL,
-      }, (response, status) => {
-        document.getElementById("loading-spinner").style.display = "none";
-
-        if (status === "OK") {
-          const results = response.rows[0].elements;
-
-          topResults.forEach((loc, i) => {
-            loc.distanceText = results[i].distance.text;
-            loc.durationText = results[i].duration.text;
-
-            const mapDivId = `map${i + 1}`;
-            const resultBoxId = `result${i + 1}`;
-
-            document.getElementById(mapDivId).style.display = "block";
-            document.getElementById(resultBoxId).style.display = "block";
-
-            const map = new google.maps.Map(document.getElementById(mapDivId), {
-              center: { lat: loc.lat, lng: loc.lng },
-              zoom: 14
-            });
-
-            const marker = new google.maps.Marker({
-              position: { lat: loc.lat, lng: loc.lng },
-              map,
-              icon: {
-                url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                scaledSize: new google.maps.Size(30, 30)
-              },
-              title: loc.name
-            });
-
-            const infowindow = new google.maps.InfoWindow({
-              content: `
-                <div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.4;">
-                  <strong style="color: #ED0024;">${loc.name}</strong><br>
-                  ${loc.address}<br>
-                  Distance: ${loc.distanceText}<br>
-                  Duration: ${loc.durationText}<br>
-                  <a href="https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}" target="_blank" style="color:#ED0024; text-decoration: underline;">Get directions</a>
-                </div>
-              `
-            });
-
-            marker.addListener("click", () => {
-              infowindow.open(map, marker);
-            });
-
-            const resultBox = document.getElementById(resultBoxId);
-            resultBox.innerHTML = `
-              <i class="fas fa-map-marker-alt" style="color: #ED0024; margin-right: 6px;"></i>
-              <strong>${loc.name}</strong><br>
-              ${loc.address}<br>
-              Distance: ${loc.distanceText}, Duration: ${loc.durationText}<br>
-              <span style="color:#ED0024; text-decoration:underline;">Click to select</span>
-            `;
-
-            resultBox.onclick = () => {
-              document.querySelectorAll('.result-box').forEach(box => box.style.borderColor = "#ddd");
-              resultBox.style.borderColor = "#ED0024";
-
-              document.getElementById("jotform-iframe").src =
-                `https://form.jotform.com/233543851603050?preferredEmergency=${encodeURIComponent(loc.name)}`;
-              document.getElementById("jotform-container").style.display = "block";
-              document.getElementById("jotform-container").scrollIntoView({ behavior: "smooth" });
-            };
-          });
-        } else {
-          alert("Distance Matrix failed: " + status);
-        }
-      });
-    }
-  </script>
- 
-
-   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJBb5D7fFcUcOreVt-h-9WCCfoD3MRa1Q&libraries=places,geometry&callback=initMap"></script>
 </body>
 </html>
